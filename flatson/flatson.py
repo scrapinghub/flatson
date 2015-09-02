@@ -1,50 +1,48 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, absolute_import
+from collections import namedtuple
 import json
 
 
-def propgetter(path):
-    if '.' in path:
-        first_key, rest = path.split('.', 1)
-        return lambda x: propgetter(rest)(x.get(first_key, {}))
-    else:
-        return lambda x: x.get(path, None)
+Field = namedtuple('Field', 'name getter')
 
 
 class Flatson(object):
-    def __init__(self, schema, field_sep='.', *args, **kwargs):
+    def __init__(self, schema, field_sep='.'*args, **kwargs):
+        if not schema.get('type', None) == 'object':
+            raise ValueError('schema must be an object')
         self.schema = schema
         self.field_sep = field_sep
-        self.fieldnames = self._build_fieldnames_from_schema(schema)
+        self.fields = self.infer_flattened_field_names(schema)
         self.serialize_array = self._get_serialization(kwargs.pop('serialize_with', 'json'))
-        self._field_getters = {k: propgetter(k) for k in self.fieldnames}
-        self.restval = "\\N"
+        self._field_getters = {k: self._create_getter(k) for k in self.fields}
 
     @classmethod
     def from_schemafile(cls, schemafile):
         with open(schemafile) as f:
             return cls(json.load(f))
 
-    def flatten(self, obj):
-        return [f.getter(obj) for f in self.fieldnames]
+    def _create_getter(self, path, field_sep='.'):
+        if field_sep in path:
+            first_key, rest = path.split(field_sep, 1)
+            return lambda x: self._create_getter(rest)(x.get(first_key, {}))
+        else:
+            return lambda x: x.get(path, None)
 
-    @staticmethod
-    def _build_fieldnames_from_schema(schema, field_sep='.'):
-        assert schema.get('type') == 'object', "Given schema is not of an object"
+    def infer_flattened_field_names(self, schema, field_sep='.'):
+        fields = []
 
-        def get_flattened_fields(obj_schema):
-            assert schema.get('properties'), "Object should have properties explicited"
+        for key, value in schema.get('properties', {}).items():
+            # TODO: add support for configuration through schema
+            val_type = value.get('type')
+            if val_type == 'object':
+                for subfield, _ in self.infer_flattened_field_names(value):
+                    full_name = '{prefix}{fsep}{extension}'.format(
+                        prefix=key, fsep=field_sep, extension=subfield)
+                    fields.append(Field(full_name, self._create_getter(full_name)))
+            else:
+                fields.append(Field(key, self._create_getter(key)))
 
-            fields = []
-            for key, value in obj_schema['properties'].items():
-                if value['type'] == 'object':
-                    for ff in get_flattened_fields(value):
-                        fields.append('{prefix}{fsep}{extension}'.format(prefix=key,fsep=field_sep, extension=ff))
-                else:
-                    fields.append(key)
-            return fields
-
-        fields = get_flattened_fields(schema)
         return sorted(fields)
 
     @staticmethod
@@ -60,7 +58,7 @@ class Flatson(object):
             raise ValueError("Unsupported serialization strategy: %s" % strategy)
 
     def adapt(self, data):
-        new_data = {k: self._serialize(self._field_getters[k](data)) for k in self.fieldnames}
+        new_data = {k: self._serialize(self._field_getters[k](data)) for k in self.fields}
         data.update(new_data)
         return new_data
 
@@ -74,11 +72,9 @@ class Flatson(object):
             return str(int(datum))
         return datum
 
-    def flat(self, data):
-        self.adapt(data)
-        for key, val in data.items():
-            if key in self.fieldnames:
-                if val is None:
-                    val = self.restval
-                data[key] = val.encode('utf-8')
-        return data
+    def flatten(self, obj):
+        return [f.getter(obj) for f in self.fields]
+
+    @property
+    def fieldnames(self):
+        return [f.name for f in self.fields]
