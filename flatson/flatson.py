@@ -1,53 +1,24 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, absolute_import
-from collections import namedtuple
-
 import json
 
 
-Field = namedtuple('Field', 'name getter')
-
-
-def create_getter(path, field_sep='.'):
-    if field_sep in path:
-        first_key, rest = path.split(field_sep, 1)
-        return lambda x: create_getter(rest)(x.get(first_key, {}))
+def propgetter(path):
+    if '.' in path:
+        first_key, rest = path.split('.', 1)
+        return lambda x: propgetter(rest)(x.get(first_key, {}))
     else:
         return lambda x: x.get(path, None)
 
 
-def infer_flattened_field_names(schema, field_sep='.'):
-    fields = []
-
-    for key, value in schema.get('properties', {}).items():
-        # TODO: add support for configuration through schema
-        val_type = value.get('type')
-        if val_type == 'object':
-            for subfield, _ in infer_flattened_field_names(value):
-                full_name = '{prefix}{fsep}{extension}'.format(
-                    prefix=key, fsep=field_sep, extension=subfield)
-                fields.append(Field(full_name, create_getter(full_name)))
-        else:
-            fields.append(Field(key, create_getter(key)))
-
-    return sorted(fields)
-
-
 class Flatson(object):
-    def __init__(self, schema, field_sep='.'):
+    def __init__(self, schema, field_sep='.', *args, **kwargs):
         self.schema = schema
         self.field_sep = field_sep
-        self.fields = self._build_fields()
-
-    @property
-    def fieldnames(self):
-        return [f.name for f in self.fields]
-
-    def _build_fields(self):
-        if self.schema.get('type') != 'object':
-            raise ValueError("Schema should be of type object")
-        return infer_flattened_field_names(self.schema,
-                                           field_sep=self.field_sep)
+        self.fieldnames = self._build_fieldnames_from_schema(schema)
+        self.serialize_array = self._get_serialization(kwargs.pop('serialize_with', 'json'))
+        self._field_getters = {k: propgetter(k) for k in self.fieldnames}
+        self.restval = "\\N"
 
     @classmethod
     def from_schemafile(cls, schemafile):
@@ -55,4 +26,71 @@ class Flatson(object):
             return cls(json.load(f))
 
     def flatten(self, obj):
-        return [f.getter(obj) for f in self.fields]
+        return [f.getter(obj) for f in self.fieldnames]
+
+    @staticmethod
+    def _build_fieldnames_from_schema(schema, field_sep='.'):
+        assert schema.get('type') == 'object', "Given schema is not of an object"
+
+        def get_flattened_fields(obj_schema):
+            assert schema.get('properties'), "Object should have properties explicited"
+
+            fields = []
+            for key, value in obj_schema['properties'].items():
+                if value['type'] == 'object':
+                    for ff in get_flattened_fields(value):
+                        fields.append('{prefix}{fsep}{extension}'.format(prefix=key,fsep=field_sep, extension=ff))
+                else:
+                    fields.append(key)
+            return fields
+
+        fields = get_flattened_fields(schema)
+        return sorted(fields)
+
+    @staticmethod
+    def _get_serialization(strategy):
+        if strategy == 'phpserialize':
+            import phpserialize
+            return lambda it: phpserialize.dumps(it).decode('utf-8')
+        elif strategy == 'json':
+            return json.dumps
+        elif strategy == 'na':
+            return lambda x: 'NA' if x else None
+        else:
+            raise ValueError("Unsupported serialization strategy: %s" % strategy)
+
+    def adapt(self, data):
+        new_data = {k: self._serialize(self._field_getters[k](data)) for k in self.fieldnames}
+        data.update(new_data)
+        return new_data
+
+    def _serialize(self, datum):
+        array_types = (tuple, list)
+
+        if isinstance(datum, array_types):
+            return self.serialize_array(datum)
+
+        if isinstance(datum, (bool, int)):
+            return str(int(datum))
+        return datum
+
+    def flat(self, data):
+        self.adapt(data)
+        for key, val in data.items():
+            if key in self.fieldnames:
+                if val is None:
+                    val = self.restval
+                data[key] = val.encode('utf-8')
+        return data
+
+
+if __name__ == '__main__':
+    with open('/home/bbotella/Descargas/schema.json') as f:
+        schema = json.loads(f.read())
+    flatson = Flatson(schema)
+
+    with open('/home/bbotella/Descargas/properties.jl')as data_file:
+        data = [json.loads(line) for line in data_file.readlines()]
+
+    for item in data:
+        print(flatson.flat(item))
