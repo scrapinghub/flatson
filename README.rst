@@ -18,6 +18,8 @@ Features
 --------
 
 * Flattens python objects with a given schema.
+* Json serialization
+* phpserialize serialization
 
 
 Next Steps

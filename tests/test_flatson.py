@@ -88,5 +88,25 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
         self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
 
+    def test_phpserialization(self):
+        contain_nested_object = {
+            'first': 'hello',
+            'second': {
+                'one': {
+                    'a': 1,
+                    'b': 2,
+                },
+                'two': {
+                    'a': 3,
+                    'b': 4,
+                },
+            }
+        }
+        schema = skinfer.generate_schema(contain_nested_object)
+        f = Flatson(schema=schema, serialize_with='phpserialize')
+        self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
+        self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
+
+
 if __name__ == '__main__':
     unittest.main()
