@@ -17,4 +17,12 @@ A tool to flatten JSON-like objects, allowing to configure via an annotated JSON
 Features
 --------
 
-* TODO
+* Flattens python objects with a given schema.
+
+
+Next Steps
+----------
+
+* Add more serialization options
+* Support to nested object in arrays
+* Unknown array boundaries support
