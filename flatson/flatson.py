@@ -82,15 +82,3 @@ class Flatson(object):
                     val = self.restval
                 data[key] = val.encode('utf-8')
         return data
-
-
-if __name__ == '__main__':
-    with open('/home/bbotella/Descargas/schema.json') as f:
-        schema = json.loads(f.read())
-    flatson = Flatson(schema)
-
-    with open('/home/bbotella/Descargas/properties.jl')as data_file:
-        data = [json.loads(line) for line in data_file.readlines()]
-
-    for item in data:
-        print(flatson.flat(item))
