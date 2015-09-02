@@ -8,7 +8,7 @@ Field = namedtuple('Field', 'name getter')
 
 
 class Flatson(object):
-    def __init__(self, schema, field_sep='.'*args, **kwargs):
+    def __init__(self, schema, field_sep='.', *args, **kwargs):
         if not schema.get('type', None) == 'object':
             raise ValueError('schema must be an object')
         self.schema = schema
