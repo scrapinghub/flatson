@@ -29,7 +29,7 @@ def infer_flattened_field_names(schema, field_sep='.'):
             for subfield in infer_flattened_field_names(value):
                 full_name = '{prefix}{fsep}{extension}'.format(
                     prefix=key, fsep=field_sep, extension=subfield.name)
-                fields.append(Field(full_name, create_getter(full_name), value))
+                fields.append(Field(full_name, create_getter(full_name), subfield.schema))
         else:
             fields.append(Field(key, create_getter(key), value))
 
