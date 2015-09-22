@@ -88,5 +88,16 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
         self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
 
+    def test_convert_object_with_simple_list(self):
+        contain_list = {
+            'first': 'hello',
+            'list': [1, 2, 3, 4],
+            'list2': ['one', 'two'],
+        }
+        schema = skinfer.generate_schema(contain_list)
+        f = Flatson(schema=schema)
+        self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
+        self.assertEquals(['hello', '1,2,3,4', 'one,two'], f.flatten(contain_list))
+
 if __name__ == '__main__':
     unittest.main()

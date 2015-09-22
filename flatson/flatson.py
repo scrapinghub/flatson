@@ -5,7 +5,10 @@ from collections import namedtuple
 import json
 
 
-Field = namedtuple('Field', 'name getter')
+class Field(namedtuple('Field', 'name getter schema')):
+    def is_simple_list(self):
+        simple_types = ('number', 'string')
+        return self.schema.get('type') == 'array' and self.schema.get('items', {}).get('type') in simple_types
 
 
 def create_getter(path, field_sep='.'):
@@ -23,12 +26,12 @@ def infer_flattened_field_names(schema, field_sep='.'):
         # TODO: add support for configuration through schema
         val_type = value.get('type')
         if val_type == 'object':
-            for subfield, _ in infer_flattened_field_names(value):
+            for subfield in infer_flattened_field_names(value):
                 full_name = '{prefix}{fsep}{extension}'.format(
-                    prefix=key, fsep=field_sep, extension=subfield)
-                fields.append(Field(full_name, create_getter(full_name)))
+                    prefix=key, fsep=field_sep, extension=subfield.name)
+                fields.append(Field(full_name, create_getter(full_name), value))
         else:
-            fields.append(Field(key, create_getter(key)))
+            fields.append(Field(key, create_getter(key), value))
 
     return sorted(fields)
 
@@ -54,5 +57,11 @@ class Flatson(object):
         with open(schemafile) as f:
             return cls(json.load(f))
 
+    def _serialize(self, field, obj):
+        field_value = field.getter(obj)
+        if field.is_simple_list():
+            return ','.join([str(x) for x in field_value])
+        return field_value
+
     def flatten(self, obj):
-        return [f.getter(obj) for f in self.fields]
+        return [self._serialize(f, obj) for f in self.fields]
