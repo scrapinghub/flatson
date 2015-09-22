@@ -18,10 +18,6 @@ requirements = [
     # TODO: put package requirements here
 ]
 
-test_requirements = [
-    # TODO: put package test requirements here
-]
-
 setup(
     name='flatson',
     version='0.1.0',
@@ -53,5 +49,4 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     test_suite='tests',
-    tests_require=test_requirements
 )

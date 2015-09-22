@@ -38,7 +38,7 @@ lint:
 	flake8 flatson tests
 
 test:
-	python setup.py test
+	nosetests -s -v
 
 test-all:
 	tox
