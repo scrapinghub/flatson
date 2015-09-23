@@ -11,18 +11,18 @@ Tests for `flatson` module.
 
 import json
 import os
-import skinfer
 import unittest
 
 from flatson import Flatson
 import tempfile
 
+EMPTY_SCHEMA = {'$schema': u'http://json-schema.org/draft-04/schema', 'type': 'object'}
 
-EMPTY_SCHEMA = skinfer.generate_schema({})
+SIMPLE_SCHEMA = {'$schema': u'http://json-schema.org/draft-04/schema',
+                 'required': [u'a_prop'], 'type': 'object',
+                 'properties': {u'a_prop': {'type': 'string'}}}
 
-SIMPLE_SCHEMA = skinfer.generate_schema({'a_prop': ''})
-
-LIST_SCHEMA = skinfer.generate_schema([])
+LIST_SCHEMA = {'$schema': u'http://json-schema.org/draft-04/schema', 'type': 'array'}
 
 
 class TestFlatson(unittest.TestCase):
@@ -64,7 +64,12 @@ class TestFlatson(unittest.TestCase):
                 'two': 2,
             }
         }
-        schema = skinfer.generate_schema(contain_nested_object)
+        schema = {'$schema': u'http://json-schema.org/draft-04/schema',
+                  'required': [u'second', u'first'], 'type': 'object', 'properties': {
+                u'second': {'required': [u'two', u'one'], 'type': 'object',
+                            'properties': {u'two': {'type': 'number'},
+                                           u'one': {'type': 'number'}}},
+                u'first': {'type': 'string'}}}
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'second.one', 'second.two'], f.fieldnames)
         self.assertEquals(['hello', 1, 2], f.flatten(contain_nested_object))
@@ -83,9 +88,21 @@ class TestFlatson(unittest.TestCase):
                 },
             }
         }
-        schema = skinfer.generate_schema(contain_nested_object)
+        schema = {'$schema': u'http://json-schema.org/draft-04/schema',
+                  'required': [u'second', u'first'], 'type': 'object', 'properties': {
+                u'second': {'required': [u'two', u'one'], 'type': 'object',
+                            'properties': {
+                                u'two': {'required': [u'a', u'b'], 'type': 'object',
+                                         'properties': {u'a': {'type': 'number'},
+                                                        u'b': {'type': 'number'}}},
+                                u'one': {'required': [u'a', u'b'], 'type': 'object',
+                                         'properties': {u'a': {'type': 'number'},
+                                                        u'b': {'type': 'number'}}}}},
+                u'first': {'type': 'string'}}}
         f = Flatson(schema=schema)
-        self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
+        self.assertEquals(
+            ['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'],
+            f.fieldnames)
         self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
 
     def test_convert_object_with_simple_list(self):
@@ -94,7 +111,12 @@ class TestFlatson(unittest.TestCase):
             'list': [1, 2, 3, 4],
             'list2': ['one', 'two'],
         }
-        schema = skinfer.generate_schema(contain_list)
+        schema = {'$schema': u'http://json-schema.org/draft-04/schema',
+                  'required': [u'list2', u'list', u'first'], 'type': 'object',
+                  'properties': {u'first': {'type': 'string'},
+                                 u'list': {'items': {'type': 'number'}, 'type': 'array'},
+                                 u'list2': {'items': {'type': 'string'},
+                                            'type': 'array'}}}
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
         self.assertEquals(['hello', '1,2,3,4', 'one,two'], f.flatten(contain_list))
@@ -108,10 +130,17 @@ class TestFlatson(unittest.TestCase):
 
             },
         }
-        schema = skinfer.generate_schema(contain_list)
+        schema = {'$schema': u'http://json-schema.org/draft-04/schema',
+                  'required': [u'second', u'first'], 'type': 'object', 'properties': {
+                u'second': {'required': [u'word', u'list1'], 'type': 'object',
+                            'properties': {
+                                u'list1': {'items': {'type': 'number'}, 'type': 'array'},
+                                u'word': {'type': 'string'}}},
+                u'first': {'type': 'string'}}}
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'second.list1', 'second.word'], f.fieldnames)
         self.assertEquals(['hello', '1,2,3,4', 'world'], f.flatten(contain_list))
+
 
 if __name__ == '__main__':
     unittest.main()
