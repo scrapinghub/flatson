@@ -93,11 +93,12 @@ class TestFlatson(unittest.TestCase):
             'first': 'hello',
             'list': [1, 2, 3, 4],
             'list2': ['one', 'two'],
+            'list3': [1, 'two', 3, 'four']
         }
         schema = skinfer.generate_schema(contain_list)
         f = Flatson(schema=schema)
-        self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
-        self.assertEquals(['hello', '1,2,3,4', 'one,two'], f.flatten(contain_list))
+        self.assertEquals(['first', 'list', 'list2', 'list3'], f.fieldnames)
+        self.assertEquals(['hello', '1,2,3,4', 'one,two', '1,two,3,four'], f.flatten(contain_list))
 
     def test_convert_object_with_nested_simple_list(self):
         contain_list = {
