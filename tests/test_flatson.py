@@ -26,7 +26,12 @@ LIST_SCHEMA = skinfer.generate_schema([])
 
 SAMPLE_WITH_LIST_OF_OBJECTS = {
     'first': 'hello',
-    'list': [{'key1': 'value1'}, {'key2': 'value2'}]
+    'list': [{'key1': 'value1', 'key2': 'value2'}, {'key1': 'value3', 'key2': 'value4'}]
+}
+
+SAMPLE_WITH_LIST_OF_TUPLES = {
+    'first': 'hello',
+    'list': [['value1', 'value2'], ['value3', 'value4']]
 }
 
 
@@ -142,14 +147,17 @@ class TestFlatson(unittest.TestCase):
         result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
 
         # then:
-        expected = 'key1:value1,key2:value2'
+        expected = 'key1:value1,key2:value2;key1:value3,key2:value4'
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', expected], result)
 
     def test_array_serialization_with_extract_pairs_custom_separators(self):
         # given:
         schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
-        serialize_options = dict(method='extract_pairs', items_sep='|', keys_sep='=')
+        serialize_options = dict(method='extract_pairs',
+                                 items_sep='|',
+                                 pairs_sep='-',
+                                 keys_sep='=')
 
         # when:
         schema['properties']['list']['flatson_serialize'] = serialize_options
@@ -157,7 +165,7 @@ class TestFlatson(unittest.TestCase):
         result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
 
         # then:
-        expected = 'key1=value1|key2=value2'
+        expected = 'key1=value1-key2=value2|key1=value3-key2=value4'
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', expected], result)
 

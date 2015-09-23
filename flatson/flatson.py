@@ -45,11 +45,16 @@ def infer_flattened_field_names(schema, field_sep='.'):
     return sorted(fields)
 
 
-def extract_pairs(options, array_value):
-    items_sep = options.get('items_sep', ',')
+def extract_pairs(array_value, options=None):
+    """Serialize array of objects with simple key-values
+    """
+    options = options or {}
+    items_sep = options.get('items_sep', ';')
+    pairs_sep = options.get('pairs_sep', ',')
     keys_sep = options.get('keys_sep', ':')
-    return items_sep.join([keys_sep.join(x)
-                           for it in array_value for x in it.items()])
+    return items_sep.join(
+        pairs_sep.join(keys_sep.join(x) for x in sorted(it.items()))
+        for it in array_value)
 
 
 class Flatson(object):
@@ -77,7 +82,7 @@ class Flatson(object):
         options = field.serialization_options
 
         if options:
-            return extract_pairs(options, value)
+            return extract_pairs(value, options)
 
         if field.is_simple_list():
             return ','.join([str(x) for x in value])
