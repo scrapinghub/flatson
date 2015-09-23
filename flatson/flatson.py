@@ -6,12 +6,19 @@ import json
 
 
 class Field(namedtuple('Field', 'name getter schema')):
-    def is_simple_list(self):
-        simple_types = ('number', 'string')
-        return self.is_array() and self.schema.get('items', {}).get('type') in simple_types
-
     def is_array(self):
         return self.schema.get('type') == 'array'
+
+    def is_simple_list(self):
+        if not self.is_array():
+            return False
+
+        items_type = self.schema.get('items', {}).get('type')
+        return items_type in ('number', 'string')
+
+    @property
+    def serialization_options(self):
+        return self.schema.get('flatson_serialize')
 
 
 def create_getter(path, field_sep='.'):
@@ -38,6 +45,13 @@ def infer_flattened_field_names(schema, field_sep='.'):
     return sorted(fields)
 
 
+def extract_pairs(options, array_value):
+    items_sep = options.get('items_sep', ',')
+    keys_sep = options.get('keys_sep', ':')
+    return items_sep.join([keys_sep.join(x)
+                           for it in array_value for x in it.items()])
+
+
 class Flatson(object):
     def __init__(self, schema, field_sep='.'):
         self.schema = schema
@@ -60,6 +74,11 @@ class Flatson(object):
             return cls(json.load(f))
 
     def _serialize_array_value(self, field, value):
+        options = field.serialization_options
+
+        if options:
+            return extract_pairs(options, value)
+
         if field.is_simple_list():
             return ','.join([str(x) for x in value])
 

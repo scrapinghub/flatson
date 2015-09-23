@@ -24,6 +24,11 @@ SIMPLE_SCHEMA = skinfer.generate_schema({'a_prop': ''})
 
 LIST_SCHEMA = skinfer.generate_schema([])
 
+SAMPLE_WITH_LIST_OF_OBJECTS = {
+    'first': 'hello',
+    'list': [{'key1': 'value1'}, {'key2': 'value2'}]
+}
+
 
 class TestFlatson(unittest.TestCase):
     def test_create(self):
@@ -115,21 +120,44 @@ class TestFlatson(unittest.TestCase):
 
     def test_lists_with_objects_should_serialize_to_json(self):
         # given:
-        with_complex_list = {
-            'first': 'hello',
-            'list': [
-                {'key1': 'value1'},
-                {'key2': 'value2'},
-            ]
-        }
-        schema = skinfer.generate_schema(with_complex_list)
+        schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
         f = Flatson(schema=schema)
 
         # when:
-        result = f.flatten(with_complex_list)
+        result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
 
         # then:
-        expected = json.dumps(with_complex_list['list'])
+        expected = json.dumps(SAMPLE_WITH_LIST_OF_OBJECTS['list'])
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', expected], result)
+
+    def test_array_serialization_with_extract_pairs(self):
+        # given:
+        schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
+        serialize_options = dict(method='extract_pairs')
+
+        # when:
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+        f = Flatson(schema=schema)
+        result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
+
+        # then:
+        expected = 'key1:value1,key2:value2'
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', expected], result)
+
+    def test_array_serialization_with_extract_pairs_custom_separators(self):
+        # given:
+        schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
+        serialize_options = dict(method='extract_pairs', items_sep='|', keys_sep='=')
+
+        # when:
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+        f = Flatson(schema=schema)
+        result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
+
+        # then:
+        expected = 'key1=value1|key2=value2'
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', expected], result)
 
