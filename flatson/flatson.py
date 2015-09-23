@@ -8,7 +8,10 @@ import json
 class Field(namedtuple('Field', 'name getter schema')):
     def is_simple_list(self):
         simple_types = ('number', 'string')
-        return self.schema.get('type') == 'array' and self.schema.get('items', {}).get('type') in simple_types
+        items = self.schema.get('items')
+        return items and self.schema.get('type') == 'array' and (
+        isinstance(items, list) or self.schema.get('items', {}).get(
+            'type') in simple_types)
 
 
 def create_getter(path, field_sep='.'):
