@@ -113,5 +113,25 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'second.list1', 'second.word'], f.fieldnames)
         self.assertEquals(['hello', '1,2,3,4', 'world'], f.flatten(contain_list))
 
+    def test_lists_with_objects_should_serialize_to_json(self):
+        # given:
+        with_complex_list = {
+            'first': 'hello',
+            'list': [
+                {'key1': 'value1'},
+                {'key2': 'value2'},
+            ]
+        }
+        schema = skinfer.generate_schema(with_complex_list)
+        f = Flatson(schema=schema)
+
+        # when:
+        result = f.flatten(with_complex_list)
+
+        # then:
+        expected = json.dumps(with_complex_list['list'])
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', expected], result)
+
 if __name__ == '__main__':
     unittest.main()

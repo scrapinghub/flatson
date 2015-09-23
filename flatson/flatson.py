@@ -8,7 +8,10 @@ import json
 class Field(namedtuple('Field', 'name getter schema')):
     def is_simple_list(self):
         simple_types = ('number', 'string')
-        return self.schema.get('type') == 'array' and self.schema.get('items', {}).get('type') in simple_types
+        return self.is_array() and self.schema.get('items', {}).get('type') in simple_types
+
+    def is_array(self):
+        return self.schema.get('type') == 'array'
 
 
 def create_getter(path, field_sep='.'):
@@ -23,7 +26,6 @@ def infer_flattened_field_names(schema, field_sep='.'):
     fields = []
 
     for key, value in schema.get('properties', {}).items():
-        # TODO: add support for configuration through schema
         val_type = value.get('type')
         if val_type == 'object':
             for subfield in infer_flattened_field_names(value):
@@ -57,11 +59,17 @@ class Flatson(object):
         with open(schemafile) as f:
             return cls(json.load(f))
 
-    def _serialize(self, field, obj):
-        field_value = field.getter(obj)
+    def _serialize_array_value(self, field, value):
         if field.is_simple_list():
-            return ','.join([str(x) for x in field_value])
-        return field_value
+            return ','.join([str(x) for x in value])
+
+        return json.dumps(value)
+
+    def _serialize(self, field, obj):
+        value = field.getter(obj)
+        if field.is_array():
+            return self._serialize_array_value(field, value)
+        return value
 
     def flatten(self, obj):
         return [self._serialize(f, obj) for f in self.fields]
