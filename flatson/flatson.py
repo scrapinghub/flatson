@@ -101,10 +101,7 @@ class Flatson(object):
                 raise ValueError('Unknown serialization method: {method}'.format(**options))
             return serialize(value, options)
 
-        if field.is_simple_list():
-            return ','.join([str(x) for x in value])
-
-        return json.dumps(value)
+        return json.dumps(value, separators=(',', ':'), sort_keys=True)
 
     def _serialize(self, field, obj):
         value = field.getter(obj)

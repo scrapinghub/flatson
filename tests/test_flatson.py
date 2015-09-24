@@ -98,18 +98,19 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
         self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
 
-    def test_convert_object_with_simple_list(self):
+    def test_convert_object_with_simple_list_with_default_serialization(self):
         contain_list = {
             'first': 'hello',
             'list': [1, 2, 3, 4],
             'list2': ['one', 'two'],
         }
         schema = skinfer.generate_schema(contain_list)
+
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
-        self.assertEquals(['hello', '1,2,3,4', 'one,two'], f.flatten(contain_list))
+        self.assertEquals(['hello', '[1,2,3,4]', '["one","two"]'], f.flatten(contain_list))
 
-    def test_convert_object_with_nested_simple_list(self):
+    def test_convert_object_with_nested_simple_list_with_default_serialization(self):
         contain_list = {
             'first': 'hello',
             'second': {
@@ -121,9 +122,9 @@ class TestFlatson(unittest.TestCase):
         schema = skinfer.generate_schema(contain_list)
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'second.list1', 'second.word'], f.fieldnames)
-        self.assertEquals(['hello', '1,2,3,4', 'world'], f.flatten(contain_list))
+        self.assertEquals(['hello', '[1,2,3,4]', 'world'], f.flatten(contain_list))
 
-    def test_lists_with_objects_should_serialize_to_json(self):
+    def test_lists_with_objects_with_default_serialization(self):
         # given:
         schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
         f = Flatson(schema=schema)
@@ -132,7 +133,7 @@ class TestFlatson(unittest.TestCase):
         result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
 
         # then:
-        expected = json.dumps(SAMPLE_WITH_LIST_OF_OBJECTS['list'])
+        expected = '[{"key1":"value1","key2":"value2"},{"key1":"value3","key2":"value4"}]'
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', expected], result)
 
