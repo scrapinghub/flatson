@@ -184,5 +184,22 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', 'one'], result)
 
+    def test_register_custom_serialization_method(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        serialize_options = dict(method='always_one')
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+        f.register_serialization_method('always_one', lambda _v, _o: '1')
+        result = f.flatten(sample)
+
+        # then:
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', '1'], result)
+
+
 if __name__ == '__main__':
     unittest.main()

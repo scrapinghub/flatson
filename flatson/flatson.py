@@ -112,5 +112,8 @@ class Flatson(object):
             return self._serialize_array_value(field, value)
         return value
 
+    def register_serialization_method(self, name, serialize_func):
+        self.serialization_methods[name] = serialize_func
+
     def flatten(self, obj):
         return [self._serialize(f, obj) for f in self.fields]
