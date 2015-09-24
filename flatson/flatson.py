@@ -45,29 +45,33 @@ def infer_flattened_field_names(schema, field_sep='.'):
     return sorted(fields)
 
 
-class SerializationMethods(object):
-    @staticmethod
-    def extract_pairs(array_value, options=None, **kwargs):
-        """Serialize array of objects with simple key-values
-        """
-        options = options or {}
-        items_sep = options.get('items_sep', ';')
-        pairs_sep = options.get('pairs_sep', ',')
-        keys_sep = options.get('keys_sep', ':')
-        return items_sep.join(
-            pairs_sep.join(keys_sep.join(x) for x in sorted(it.items()))
-            for it in array_value)
+def extract_key_values(array_value, options=None, **kwargs):
+    """Serialize array of objects with simple key-values
+    """
+    options = options or {}
+    items_sep = options.get('items_sep', ';')
+    pairs_sep = options.get('pairs_sep', ',')
+    keys_sep = options.get('keys_sep', ':')
+    return items_sep.join(
+        pairs_sep.join(keys_sep.join(x) for x in sorted(it.items()))
+        for it in array_value)
 
-    @staticmethod
-    def extract_first(array_value, options=None, **kwargs):
-        return array_value[0]
+
+def extract_first(array_value, options=None, **kwargs):
+    return array_value[0]
 
 
 class Flatson(object):
+    _default_serialization_methods = {
+        'extract_key_values': extract_key_values,
+        'extract_first': extract_first,
+    }
+
     def __init__(self, schema, field_sep='.'):
         self.schema = schema
         self.field_sep = field_sep
         self.fields = self._build_fields()
+        self.serialization_methods = dict(self._default_serialization_methods)
 
     @property
     def fieldnames(self):
@@ -92,10 +96,10 @@ class Flatson(object):
                 raise ValueError('Missing method in serialization options for field %s' % field.name)
 
             try:
-                method = getattr(SerializationMethods, options['method'])
-            except AttributeError:
+                serialize = self.serialization_methods[options['method']]
+            except KeyError:
                 raise ValueError('Unknown serialization method: {method}'.format(**options))
-            return method(value, options)
+            return serialize(value, options)
 
         if field.is_simple_list():
             return ','.join([str(x) for x in value])
