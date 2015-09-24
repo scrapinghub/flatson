@@ -143,7 +143,7 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['hello', '1,2,3,4', '["one","two"]'], f.flatten(contain_list))
 
         # and when:
-        schema['properties']['list']['flatson_serialize']['items_sep'] = '+'
+        schema['properties']['list']['flatson_serialize']['separator'] = '+'
         f = Flatson(schema=schema)
 
         # then:
@@ -181,9 +181,7 @@ class TestFlatson(unittest.TestCase):
         # given:
         schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
         serialize_options = dict(method='extract_key_values',
-                                 items_sep='|',
-                                 fields_sep='-',
-                                 keys_sep='=')
+                                 separators=('|', '-', '='))
 
         # when:
         schema['properties']['list']['flatson_serialize'] = serialize_options

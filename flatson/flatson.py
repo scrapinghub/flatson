@@ -45,20 +45,20 @@ def infer_flattened_field_names(schema, field_sep='.'):
     return sorted(fields)
 
 
-def extract_key_values(array_value, items_sep=';', fields_sep=',', keys_sep=':', **kwargs):
+def extract_key_values(array_value, separators=(';', ',', ':'), **kwargs):
     """Serialize array of objects with simple key-values
     """
-    return items_sep.join(
-        fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
-        for it in array_value)
+    items_sep, fields_sep, keys_sep = separators
+    return items_sep.join(fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
+                          for it in array_value)
 
 
 def extract_first(array_value, **kwargs):
     return array_value[0]
 
 
-def join_values(array_value, items_sep=',', **kwargs):
-    return items_sep.join(str(x) for x in array_value)
+def join_values(array_value, separator=',', **kwargs):
+    return separator.join(str(x) for x in array_value)
 
 
 class Flatson(object):
