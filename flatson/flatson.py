@@ -18,7 +18,7 @@ class Field(namedtuple('Field', 'name getter schema')):
 
     @property
     def serialization_options(self):
-        return self.schema.get('flatson_serialize')
+        return self.schema.get('flatson_serialize') or {}
 
 
 def create_getter(path, field_sep='.'):
@@ -45,25 +45,19 @@ def infer_flattened_field_names(schema, field_sep='.'):
     return sorted(fields)
 
 
-def extract_key_values(array_value, options=None, **kwargs):
+def extract_key_values(array_value, items_sep=';', fields_sep=',', keys_sep=':', **kwargs):
     """Serialize array of objects with simple key-values
     """
-    options = options or {}
-    items_sep = options.get('items_sep', ';')
-    fields_sep = options.get('fields_sep', ',')
-    keys_sep = options.get('keys_sep', ':')
     return items_sep.join(
         fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
         for it in array_value)
 
 
-def extract_first(array_value, options=None, **kwargs):
+def extract_first(array_value, **kwargs):
     return array_value[0]
 
 
-def join_values(array_value, options=None, **kwargs):
-    options = options or {}
-    items_sep = options.get('items_sep', ',')
+def join_values(array_value, items_sep=',', **kwargs):
     return items_sep.join(str(x) for x in array_value)
 
 
@@ -96,17 +90,20 @@ class Flatson(object):
             return cls(json.load(f))
 
     def _serialize_array_value(self, field, value):
-        options = field.serialization_options
+        options = dict(field.serialization_options)
 
         if options:
-            if 'method' not in options:
-                raise ValueError('Missing method in serialization options for field %s' % field.name)
+            try:
+                method = options.pop('method')
+            except KeyError:
+                raise ValueError(
+                    'Missing method in serialization options for field %s' % field.name)
 
             try:
-                serialize = self.serialization_methods[options['method']]
+                serialize = self.serialization_methods[method]
             except KeyError:
                 raise ValueError('Unknown serialization method: {method}'.format(**options))
-            return serialize(value, options)
+            return serialize(value, **options)
 
         return json.dumps(value, separators=(',', ':'), sort_keys=True)
 

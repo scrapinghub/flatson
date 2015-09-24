@@ -219,7 +219,7 @@ class TestFlatson(unittest.TestCase):
 
         # when:
         f = Flatson(schema=schema)
-        f.register_serialization_method('always_one', lambda _v, _o: '1')
+        f.register_serialization_method('always_one', lambda _v, **kw: '1')
         result = f.flatten(sample)
 
         # then:
