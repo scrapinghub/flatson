@@ -50,10 +50,10 @@ def extract_key_values(array_value, options=None, **kwargs):
     """
     options = options or {}
     items_sep = options.get('items_sep', ';')
-    pairs_sep = options.get('pairs_sep', ',')
+    fields_sep = options.get('fields_sep', ',')
     keys_sep = options.get('keys_sep', ':')
     return items_sep.join(
-        pairs_sep.join(keys_sep.join(x) for x in sorted(it.items()))
+        fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
         for it in array_value)
 
 
@@ -61,10 +61,17 @@ def extract_first(array_value, options=None, **kwargs):
     return array_value[0]
 
 
+def join_values(array_value, options=None, **kwargs):
+    options = options or {}
+    items_sep = options.get('items_sep', ',')
+    return items_sep.join(str(x) for x in array_value)
+
+
 class Flatson(object):
     _default_serialization_methods = {
         'extract_key_values': extract_key_values,
         'extract_first': extract_first,
+        'join_values': join_values,
     }
 
     def __init__(self, schema, field_sep='.'):
