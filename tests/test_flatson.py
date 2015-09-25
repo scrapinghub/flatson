@@ -24,6 +24,16 @@ SIMPLE_SCHEMA = skinfer.generate_schema({'a_prop': ''})
 
 LIST_SCHEMA = skinfer.generate_schema([])
 
+SAMPLE_WITH_LIST_OF_OBJECTS = {
+    'first': 'hello',
+    'list': [{'key1': 'value1', 'key2': 'value2'}, {'key1': 'value3', 'key2': 'value4'}]
+}
+
+SAMPLE_WITH_LIST_OF_TUPLES = {
+    'first': 'hello',
+    'list': [['value1', 'value2'], ['value3', 'value4']]
+}
+
 
 class TestFlatson(unittest.TestCase):
     def test_create(self):
@@ -88,18 +98,19 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
         self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
 
-    def test_convert_object_with_simple_list(self):
+    def test_convert_object_with_simple_list_with_default_serialization(self):
         contain_list = {
             'first': 'hello',
             'list': [1, 2, 3, 4],
             'list2': ['one', 'two'],
         }
         schema = skinfer.generate_schema(contain_list)
+
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
-        self.assertEquals(['hello', '1,2,3,4', 'one,two'], f.flatten(contain_list))
+        self.assertEquals(['hello', '[1,2,3,4]', '["one","two"]'], f.flatten(contain_list))
 
-    def test_convert_object_with_nested_simple_list(self):
+    def test_convert_object_with_nested_simple_list_with_default_serialization(self):
         contain_list = {
             'first': 'hello',
             'second': {
@@ -111,27 +122,120 @@ class TestFlatson(unittest.TestCase):
         schema = skinfer.generate_schema(contain_list)
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'second.list1', 'second.word'], f.fieldnames)
-        self.assertEquals(['hello', '1,2,3,4', 'world'], f.flatten(contain_list))
+        self.assertEquals(['hello', '[1,2,3,4]', 'world'], f.flatten(contain_list))
 
-    def test_lists_with_objects_should_serialize_to_json(self):
+    def test_convert_object_with_simple_list_with_join_serialization(self):
         # given:
-        with_complex_list = {
+        contain_list = {
             'first': 'hello',
-            'list': [
-                {'key1': 'value1'},
-                {'key2': 'value2'},
-            ]
+            'list': [1, 2, 3, 4],
+            'list2': ['one', 'two'],
         }
-        schema = skinfer.generate_schema(with_complex_list)
+        schema = skinfer.generate_schema(contain_list)
+        serialize_options = dict(method='join_values')
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+
+        # then:
+        self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
+        self.assertEquals(['hello', '1,2,3,4', '["one","two"]'], f.flatten(contain_list))
+
+        # and when:
+        schema['properties']['list']['flatson_serialize']['separator'] = '+'
+        f = Flatson(schema=schema)
+
+        # then:
+        self.assertEquals(['hello', '1+2+3+4', '["one","two"]'], f.flatten(contain_list))
+
+    def test_lists_with_objects_with_default_serialization(self):
+        # given:
+        schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
         f = Flatson(schema=schema)
 
         # when:
-        result = f.flatten(with_complex_list)
+        result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
 
         # then:
-        expected = json.dumps(with_complex_list['list'])
+        expected = '[{"key1":"value1","key2":"value2"},{"key1":"value3","key2":"value4"}]'
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', expected], result)
+
+    def test_array_serialization_with_extract_key_values(self):
+        # given:
+        schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
+        serialize_options = dict(method='extract_key_values')
+
+        # when:
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+        f = Flatson(schema=schema)
+        result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
+
+        # then:
+        expected = 'key1:value1,key2:value2;key1:value3,key2:value4'
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', expected], result)
+
+    def test_array_serialization_with_extract_key_values_custom_separators(self):
+        # given:
+        schema = skinfer.generate_schema(SAMPLE_WITH_LIST_OF_OBJECTS)
+        serialize_options = dict(method='extract_key_values',
+                                 separators=('|', '-', '='))
+
+        # when:
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+        f = Flatson(schema=schema)
+        result = f.flatten(SAMPLE_WITH_LIST_OF_OBJECTS)
+
+        # then:
+        expected = 'key1=value1-key2=value2|key1=value3-key2=value4'
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', expected], result)
+
+    def test_array_serialization_with_extract_first(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        serialize_options = dict(method='extract_first')
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+        result = f.flatten(sample)
+
+        # then:
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', 'one'], result)
+
+    def test_register_custom_serialization_method(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        serialize_options = dict(method='always_one')
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+        f.register_serialization_method('always_one', lambda _v, **kw: '1')
+        result = f.flatten(sample)
+
+        # then:
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', '1'], result)
+
+    def test_disallow_overwriting_official_serialization_methods(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        serialize_options = dict(method='always_one')
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+        with self.assertRaises(ValueError):
+            f.register_serialization_method('extract_first', lambda _v, **kw: _v[2])
+
 
 if __name__ == '__main__':
     unittest.main()

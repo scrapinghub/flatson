@@ -6,12 +6,19 @@ import json
 
 
 class Field(namedtuple('Field', 'name getter schema')):
-    def is_simple_list(self):
-        simple_types = ('number', 'string')
-        return self.is_array() and self.schema.get('items', {}).get('type') in simple_types
-
     def is_array(self):
         return self.schema.get('type') == 'array'
+
+    def is_simple_list(self):
+        if not self.is_array():
+            return False
+
+        items_type = self.schema.get('items', {}).get('type')
+        return items_type in ('number', 'string')
+
+    @property
+    def serialization_options(self):
+        return self.schema.get('flatson_serialize') or {}
 
 
 def create_getter(path, field_sep='.'):
@@ -38,11 +45,34 @@ def infer_flattened_field_names(schema, field_sep='.'):
     return sorted(fields)
 
 
+def extract_key_values(array_value, separators=(';', ',', ':'), **kwargs):
+    """Serialize array of objects with simple key-values
+    """
+    items_sep, fields_sep, keys_sep = separators
+    return items_sep.join(fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
+                          for it in array_value)
+
+
+def extract_first(array_value, **kwargs):
+    return array_value[0]
+
+
+def join_values(array_value, separator=',', **kwargs):
+    return separator.join(str(x) for x in array_value)
+
+
 class Flatson(object):
+    _default_serialization_methods = {
+        'extract_key_values': extract_key_values,
+        'extract_first': extract_first,
+        'join_values': join_values,
+    }
+
     def __init__(self, schema, field_sep='.'):
         self.schema = schema
         self.field_sep = field_sep
         self.fields = self._build_fields()
+        self._serialization_methods = dict(self._default_serialization_methods)
 
     @property
     def fieldnames(self):
@@ -60,16 +90,33 @@ class Flatson(object):
             return cls(json.load(f))
 
     def _serialize_array_value(self, field, value):
-        if field.is_simple_list():
-            return ','.join([str(x) for x in value])
+        options = dict(field.serialization_options)
 
-        return json.dumps(value)
+        if options:
+            try:
+                method = options.pop('method')
+            except KeyError:
+                raise ValueError(
+                    'Missing method in serialization options for field %s' % field.name)
+
+            try:
+                serialize = self._serialization_methods[method]
+            except KeyError:
+                raise ValueError('Unknown serialization method: {method}'.format(**options))
+            return serialize(value, **options)
+
+        return json.dumps(value, separators=(',', ':'), sort_keys=True)
 
     def _serialize(self, field, obj):
         value = field.getter(obj)
         if field.is_array():
             return self._serialize_array_value(field, value)
         return value
+
+    def register_serialization_method(self, name, serialize_func):
+        if name in self._default_serialization_methods:
+            raise ValueError("Can't replace original %s serialization method")
+        self._serialization_methods[name] = serialize_func
 
     def flatten(self, obj):
         return [self._serialize(f, obj) for f in self.fields]
