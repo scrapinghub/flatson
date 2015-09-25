@@ -54,7 +54,8 @@ def extract_key_values(array_value, separators=(';', ',', ':'), **kwargs):
 
 
 def extract_first(array_value, **kwargs):
-    return array_value[0]
+    if array_value:
+        return array_value[0]
 
 
 def join_values(array_value, separator=',', **kwargs):

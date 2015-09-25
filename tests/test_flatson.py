@@ -208,6 +208,14 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', 'one'], result)
 
+        # and when:
+        sample2 = {'first': 'hello', 'list': []}
+        result = f.flatten(sample2)
+
+        # then:
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', None], result)
+
     def test_register_custom_serialization_method(self):
         # given:
         sample = {'first': 'hello', 'list': ['one', 'two']}
