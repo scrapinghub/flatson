@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, absolute_import
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 import json
 
@@ -121,3 +121,6 @@ class Flatson(object):
 
     def flatten(self, obj):
         return [self._serialize(f, obj) for f in self.fields]
+
+    def flatten_dict(self, obj):
+        return OrderedDict(zip(self.fieldnames, self.flatten(obj)))

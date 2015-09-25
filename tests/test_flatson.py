@@ -79,6 +79,19 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'second.one', 'second.two'], f.fieldnames)
         self.assertEquals(['hello', 1, 2], f.flatten(contain_nested_object))
 
+    def test_flatten_dict(self):
+        contain_nested_object = {
+            'first': 'hello',
+            'second': {
+                'one': 1,
+                'two': 2,
+            }
+        }
+        schema = skinfer.generate_schema(contain_nested_object)
+        f = Flatson(schema=schema)
+        expected = {'first': 'hello', 'second.one': 1, 'second.two': 2}
+        self.assertEquals(expected, f.flatten_dict(contain_nested_object))
+
     def test_convert_deep_nested_objects(self):
         contain_nested_object = {
             'first': 'hello',
