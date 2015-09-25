@@ -72,7 +72,7 @@ class Flatson(object):
         self.schema = schema
         self.field_sep = field_sep
         self.fields = self._build_fields()
-        self.serialization_methods = dict(self._default_serialization_methods)
+        self._serialization_methods = dict(self._default_serialization_methods)
 
     @property
     def fieldnames(self):
@@ -100,7 +100,7 @@ class Flatson(object):
                     'Missing method in serialization options for field %s' % field.name)
 
             try:
-                serialize = self.serialization_methods[method]
+                serialize = self._serialization_methods[method]
             except KeyError:
                 raise ValueError('Unknown serialization method: {method}'.format(**options))
             return serialize(value, **options)
@@ -114,7 +114,9 @@ class Flatson(object):
         return value
 
     def register_serialization_method(self, name, serialize_func):
-        self.serialization_methods[name] = serialize_func
+        if name in self._default_serialization_methods:
+            raise ValueError("Can't replace original %s serialization method")
+        self._serialization_methods[name] = serialize_func
 
     def flatten(self, obj):
         return [self._serialize(f, obj) for f in self.fields]

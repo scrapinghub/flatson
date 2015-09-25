@@ -224,6 +224,18 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first', 'list'], f.fieldnames)
         self.assertEquals(['hello', '1'], result)
 
+    def test_disallow_overwriting_official_serialization_methods(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        serialize_options = dict(method='always_one')
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+        with self.assertRaises(ValueError):
+            f.register_serialization_method('extract_first', lambda _v, **kw: _v[2])
+
 
 if __name__ == '__main__':
     unittest.main()
