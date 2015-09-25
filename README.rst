@@ -68,12 +68,3 @@ You can also configure array serialization behavior through the schema (default 
     >>> f = Flatson(schema)
     >>> f.flatten({"name": "Salazar", "skills": ["hacking", "socker", "partying"]})
     ['Salazar', 'hacking,socker,partying']
-
-
-Next Steps
-----------
-
-Read more on :ref:`how to use Flatson <usage>`, check out the `Github Repo`_
-and feel free to send Issues or PRs. =)
-
-.. _Github Repo: https://github.com/scrapinghub/flatson
