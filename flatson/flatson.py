@@ -63,6 +63,8 @@ def join_values(array_value, separator=',', **kwargs):
 
 
 class Flatson(object):
+    """This class implements flattening of JSON objects
+    """
     _default_serialization_methods = {
         'extract_key_values': extract_key_values,
         'extract_first': extract_first,
@@ -77,6 +79,8 @@ class Flatson(object):
 
     @property
     def fieldnames(self):
+        """Field names inferred from schema
+        """
         return [f.name for f in self.fields]
 
     def _build_fields(self):
@@ -87,6 +91,8 @@ class Flatson(object):
 
     @classmethod
     def from_schemafile(cls, schemafile):
+        """Create a Flatson instance from a schemafile
+        """
         with open(schemafile) as f:
             return cls(json.load(f))
 
@@ -115,12 +121,19 @@ class Flatson(object):
         return value
 
     def register_serialization_method(self, name, serialize_func):
+        """Register a custom serialization method that can be
+        used via schema configuration
+        """
         if name in self._default_serialization_methods:
             raise ValueError("Can't replace original %s serialization method")
         self._serialization_methods[name] = serialize_func
 
     def flatten(self, obj):
+        """Return a list with the field values
+        """
         return [self._serialize(f, obj) for f in self.fields]
 
     def flatten_dict(self, obj):
+        """Return an OrderedDict dict preserving order of keys in fieldnames
+        """
         return OrderedDict(zip(self.fieldnames, self.flatten(obj)))
