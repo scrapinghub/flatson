@@ -24,8 +24,9 @@ If you are reporting a bug, please include:
 Fix Bugs
 ~~~~~~~~
 
-Look through the GitHub issues for bugs. Anything tagged with "bug"
-is open to whoever wants to implement it.
+Look through the GitHub issues for bugs. Anything `tagged with "bug"
+<https://github.com/scrapinghub/flatson/labels/bug>`_ is open to whoever wants
+to implement it.
 
 Implement Features
 ~~~~~~~~~~~~~~~~~~

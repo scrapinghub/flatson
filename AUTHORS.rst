@@ -10,4 +10,5 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Elias Dorneles <elias@scrapinghub.com>
+* Bernardo Botella <bernardo@scrapinghub.com>
