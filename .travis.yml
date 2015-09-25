@@ -1,16 +1,26 @@
-# Config file for automatic testing at travis-ci.org
-
 language: python
+python: 2.7
 
-python:
-  - "3.4"
-  - "3.3"
-  - "2.7"
-  - "2.6"
-  - "pypy"
+env:
+  - TOXENV=py27
+  - TOXENV=pypy
+# TODO: fix tests to work in PY3
+#  - TOXENV=py33
+#  - TOXENV=py34
 
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -r requirements.txt
+install:
+  - pip install -U tox twine wheel
 
-# command to run tests, e.g. python setup.py test
-script: python setup.py test
+script:
+  - tox
+
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: eljunior
+  password:
+    secure: hlCvg9fIXjdzklXE/loMRxXnXCkJ3PTMSHltvUaPXgy96j1gyTNwbLa24DtR7me2bfCGXCwXSj0uPA5TrcAAFeXAfHndK/x61YMNBsbalVFcb4cWFF2xnDLlxl5vXN23Lx0xWN87bc4dnkK0scTYlvV7PFcmNSRImytKz/8LbBnI8ffDimNjH3gcem/7q9wDjv4/aQXvU/SbI7VBZ4vTefyQDBlxVOMZZbXoQpeDqJ4YPZpCvhPRokrSMrMpG/4e7JfY0gneN/19dK8FVvTFrnw++7TmWskxf9IjQceJQDCpdYRUO9TszdGgU0fFCu2a91xXoumIy81QFZ3ZTy7/bDdM2PhPjt9e58yiak96ypS5bXjd9RXywOWzH9c1VtTrs1JLCGufJZtYGWnKrUNJUyXgeltLzMdOnFOT6uicVZyoVhQe2gvG2s5nVihg9USJ2PN+ovPiaP5kp8t98BSm7NNiMQNtf0augKqB44N91WRKk+Kr68zKum+nrFOqFxu/1gcWCo1wL78LwKByNxmfa8WiSDZ+NV2Um7YR+tZ3Y7cAEtD0S5QcMPDCH1m+XgwzojJTiuLo14CQWRSwCVYIU3Mpllv3l+iEpfPKr4Ent95IDvFcNJkvEGBzRuABC9mhLTMZa1cH7fmCCm7aqiLEK40qpm125NimrZBoV/iWRlE=
+  on:
+    tags: true
+    repo: scrapinghub/flatson
+    condition: $TOXENV == py27
