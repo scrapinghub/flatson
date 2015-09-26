@@ -29,24 +29,6 @@ def create_getter(path, field_sep='.'):
         return lambda x: x.get(path, None)
 
 
-def infer_flattened_field_names(schema, field_sep='.'):
-    fields = []
-
-    for key, value in schema.get('properties', {}).items():
-        if value.get('flatson_ignore'):
-            continue
-        val_type = value.get('type')
-        if val_type == 'object':
-            for subfield in infer_flattened_field_names(value):
-                full_name = '{prefix}{fsep}{extension}'.format(
-                    prefix=key, fsep=field_sep, extension=subfield.name)
-                fields.append(Field(full_name, create_getter(full_name), subfield.schema))
-        else:
-            fields.append(Field(key, create_getter(key), value))
-
-    return sorted(fields)
-
-
 def extract_key_values(array_value, separators=(';', ',', ':'), **kwargs):
     """Serialize array of objects with simple key-values
     """
@@ -73,7 +55,10 @@ class Flatson(object):
         'join_values': join_values,
     }
 
-    def __init__(self, schema, field_sep='.'):
+    def __init__(self, schema, field_sep='.', ignore=None):
+        self.ignore = ignore
+        if not self.ignore:
+            self.ignore = []
         self.schema = schema
         self.field_sep = field_sep
         self.fields = self._build_fields()
@@ -88,7 +73,7 @@ class Flatson(object):
     def _build_fields(self):
         if self.schema.get('type') != 'object':
             raise ValueError("Schema should be of type object")
-        return infer_flattened_field_names(self.schema,
+        return self.infer_flattened_field_names(self.schema,
                                            field_sep=self.field_sep)
 
     @classmethod
@@ -139,3 +124,20 @@ class Flatson(object):
         """Return an OrderedDict dict preserving order of keys in fieldnames
         """
         return OrderedDict(zip(self.fieldnames, self.flatten(obj)))
+
+    def infer_flattened_field_names(self, schema, field_sep='.'):
+        fields = []
+
+        for key, value in schema.get('properties', {}).items():
+            if value.get('flatson_ignore') or key in self.ignore:
+                continue
+            val_type = value.get('type')
+            if val_type == 'object':
+                for subfield in self.infer_flattened_field_names(value):
+                    full_name = '{prefix}{fsep}{extension}'.format(
+                        prefix=key, fsep=field_sep, extension=subfield.name)
+                    fields.append(Field(full_name, create_getter(full_name), subfield.schema))
+            else:
+                fields.append(Field(key, create_getter(key), value))
+
+        return sorted(fields)
