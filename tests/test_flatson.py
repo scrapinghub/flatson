@@ -273,7 +273,7 @@ class TestFlatson(unittest.TestCase):
         # given:
         sample = {'first': 'hello', 'list': ['one', 'two']}
         schema = skinfer.generate_schema(sample)
-        fields_to_ignore = ['flatson_ignore']
+        fields_to_ignore = ['list']
 
         # then:
         f = Flatson(schema=schema, ignore=fields_to_ignore)
