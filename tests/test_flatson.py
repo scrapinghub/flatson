@@ -257,6 +257,17 @@ class TestFlatson(unittest.TestCase):
         with self.assertRaises(ValueError):
             f.register_serialization_method('extract_first', lambda _v, **kw: _v[2])
 
+    def test_ignore_fields_using_schema(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        schema['properties']['list']['flatson_ignore'] = True
+
+        # then:
+        f = Flatson(schema=schema)
+        result = f.flatten(sample)
+        self.assertEquals(['first'], f.fieldnames)
+        self.assertEquals(['hello'], result)
 
 if __name__ == '__main__':
     unittest.main()
