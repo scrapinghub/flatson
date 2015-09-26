@@ -33,6 +33,8 @@ def infer_flattened_field_names(schema, field_sep='.'):
     fields = []
 
     for key, value in schema.get('properties', {}).items():
+        if value.get('flatson_ignore'):
+            continue
         val_type = value.get('type')
         if val_type == 'object':
             for subfield in infer_flattened_field_names(value):
