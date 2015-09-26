@@ -59,6 +59,11 @@ def extract_first(array_value, **kwargs):
 
 
 def join_values(array_value, separator=',', **kwargs):
+    try:
+        number_of_items = kwargs.pop('number_of_items')
+        array_value = array_value[:number_of_items]
+    except:
+        pass
     return separator.join(str(x) for x in array_value)
 
 
