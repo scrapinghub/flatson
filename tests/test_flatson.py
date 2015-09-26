@@ -269,5 +269,17 @@ class TestFlatson(unittest.TestCase):
         self.assertEquals(['first'], f.fieldnames)
         self.assertEquals(['hello'], result)
 
+    def test_ignore_fields_using_flatson_args(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two']}
+        schema = skinfer.generate_schema(sample)
+        fields_to_ignore = ['flatson_ignore']
+
+        # then:
+        f = Flatson(schema=schema, ignore=fields_to_ignore)
+        result = f.flatten(sample)
+        self.assertEquals(['first'], f.fieldnames)
+        self.assertEquals(['hello'], result)
+
 if __name__ == '__main__':
     unittest.main()
