@@ -68,3 +68,43 @@ You can also configure array serialization behavior through the schema (default 
     >>> f = Flatson(schema)
     >>> f.flatten({"name": "Salazar", "skills": ["hacking", "socker", "partying"]})
     ['Salazar', 'hacking,socker,partying']
+
+Flatson also support ignoring fields with schema options::
+
+    >>> schema = {
+            "$schema": "http://json-schema.org/draft-04/schema",
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "skills": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "flatson_serialize": {"method": "join_values"},
+                    "flatson_ignore": True,
+                }
+            }
+        }
+    >>> f = Flatson(schema)
+    >>> f.flatten({"name": "Salazar", "skills": ["hacking", "socker", "partying"]})
+    ['Salazar']
+
+
+
+And passing a list of fields to ignore to Flatson::
+
+    >>> schema = {
+            "$schema": "http://json-schema.org/draft-04/schema",
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "skills": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "flatson_serialize": {"method": "join_values"},
+                }
+            }
+        }
+    >>> f = Flatson(schema, ignore=['skills'])
+    >>> f.flatten({"name": "Salazar", "skills": ["hacking", "socker", "partying"]})
+    ['Salazar']
+
