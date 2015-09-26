@@ -257,6 +257,20 @@ class TestFlatson(unittest.TestCase):
         with self.assertRaises(ValueError):
             f.register_serialization_method('extract_first', lambda _v, **kw: _v[2])
 
+    def test_extract_fixed_number_of_items_from_arrays(self):
+        # given:
+        sample = {'first': 'hello', 'list': ['one', 'two', 'three', 'four']}
+        schema = skinfer.generate_schema(sample)
+        schema['properties']['list']['flatson_number_of_items'] = 2
+
+        # when:
+        f = Flatson(schema=schema)
+        result = f.flatten(sample)
+
+        # then:
+        self.assertEquals(['first', 'list'], f.fieldnames)
+        self.assertEquals(['hello', '["one","two"]'], result)
+
 
 if __name__ == '__main__':
     unittest.main()
