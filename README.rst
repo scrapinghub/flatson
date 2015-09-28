@@ -79,7 +79,6 @@ Flatson also support ignoring fields with schema options::
                 "skills": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "flatson_serialize": {"method": "join_values"},
                     "flatson_ignore": True,
                 }
             }
@@ -100,7 +99,6 @@ And passing a list of fields to ignore to Flatson::
                 "skills": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "flatson_serialize": {"method": "join_values"},
                 }
             }
         }
