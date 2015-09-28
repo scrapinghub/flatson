@@ -29,6 +29,11 @@ def create_getter(path, field_sep='.'):
         return lambda x: x.get(path, None)
 
 
+def create_tuple_getter(key, index):
+    return lambda x: x.get(key, None)[index]
+
+
+
 def infer_flattened_field_names(schema, field_sep='.'):
     fields = []
 
@@ -40,7 +45,12 @@ def infer_flattened_field_names(schema, field_sep='.'):
                     prefix=key, fsep=field_sep, extension=subfield.name)
                 fields.append(Field(full_name, create_getter(full_name), subfield.schema))
         else:
-            fields.append(Field(key, create_getter(key), value))
+            if 'flatson_serialize' in value and value['flatson_serialize'].get('objects_to_extract'):
+                for i in range(value['flatson_serialize']['objects_to_extract']):
+                    fields.append(
+                        Field(key + str(i + 1), create_tuple_getter(key, i), value))
+            else:
+                fields.append(Field(key, create_getter(key), value))
 
     return sorted(fields)
 
@@ -49,8 +59,12 @@ def extract_key_values(array_value, separators=(';', ',', ':'), **kwargs):
     """Serialize array of objects with simple key-values
     """
     items_sep, fields_sep, keys_sep = separators
-    return items_sep.join(fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
-                          for it in array_value)
+    if isinstance(array_value, dict):
+        return fields_sep.join(keys_sep.join(x) for x in sorted(array_value.items()))
+    else:
+        return items_sep.join(
+            fields_sep.join(keys_sep.join(x) for x in sorted(it.items()))
+            for it in array_value)
 
 
 def extract_first(array_value, **kwargs):
@@ -62,6 +76,14 @@ def join_values(array_value, separator=',', **kwargs):
     return separator.join(str(x) for x in array_value)
 
 
+def unpack_fixed(array_value, separator=',', **kwargs):
+    if not 'objects_to_extract' in kwargs:
+        raise ValueError('objects_to_extract should be defined for unpack fixed method')
+    if array_value:
+        array_value = array_value[:kwargs.get('objects_to_extract')]
+        return separator.join(str(x) for x in array_value)
+
+
 class Flatson(object):
     """This class implements flattening of JSON objects
     """
@@ -69,6 +91,7 @@ class Flatson(object):
         'extract_key_values': extract_key_values,
         'extract_first': extract_first,
         'join_values': join_values,
+        'unpack_fixed': unpack_fixed,
     }
 
     def __init__(self, schema, field_sep='.'):
@@ -109,7 +132,8 @@ class Flatson(object):
             try:
                 serialize = self._serialization_methods[method]
             except KeyError:
-                raise ValueError('Unknown serialization method: {method}'.format(**options))
+                raise ValueError(
+                    'Unknown serialization method: {method}'.format(**options))
             return serialize(value, **options)
 
         return json.dumps(value, separators=(',', ':'), sort_keys=True)

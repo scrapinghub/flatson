@@ -264,7 +264,8 @@ class TestFlatson(unittest.TestCase):
         sample = {'first': 'hello',
                   'list': [{'value1': 'one'}, {'value2': 'two'}, {'value3': 'three'}]}
         schema = skinfer.generate_schema(sample)
-        serialize_options = dict(method='unpack_fixed', objects_to_extract=2)
+        serialize_options = dict(method='extract_key_values',
+                                 separators=('|', '-', '='), objects_to_extract=2)
         schema['properties']['list']['flatson_serialize'] = serialize_options
 
         # when:
@@ -272,7 +273,7 @@ class TestFlatson(unittest.TestCase):
         result = f.flatten(sample)
         # then:
         self.assertEquals(['first', 'list1', 'list2'], f.fieldnames)
-        self.assertEquals(['hello', '{"value1": "one"}', '{"value2": "two"}'], result)
+        self.assertEquals(['hello', 'value1=one', 'value2=two'], result)
 
 
 if __name__ == '__main__':
