@@ -56,9 +56,7 @@ class Flatson(object):
     }
 
     def __init__(self, schema, field_sep='.', ignore=None):
-        self.ignore = ignore
-        if not self.ignore:
-            self.ignore = []
+        self.ignore = set(ignore) if ignore else set()
         self.schema = schema
         self.field_sep = field_sep
         self.fields = self._build_fields()
