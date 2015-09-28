@@ -21,38 +21,44 @@ class Field(namedtuple('Field', 'name getter schema')):
         return self.schema.get('flatson_serialize') or {}
 
 
-def create_getter(path, field_sep='.'):
-    if field_sep in path:
-        first_key, rest = path.split(field_sep, 1)
-        return lambda x: create_getter(rest)(x.get(first_key, {}))
-    else:
-        return lambda x: x.get(path, None)
+class FieldsInferrer(object):
+    def __init__(self, schema, field_sep='.'):
+        self.schema = schema
+        self.field_sep = field_sep
 
-
-def create_tuple_getter(key, index):
-    return lambda x: x.get(key, None)[index]
-
-
-
-def infer_flattened_field_names(schema, field_sep='.'):
-    fields = []
-
-    for key, value in schema.get('properties', {}).items():
-        val_type = value.get('type')
-        if val_type == 'object':
-            for subfield in infer_flattened_field_names(value):
-                full_name = '{prefix}{fsep}{extension}'.format(
-                    prefix=key, fsep=field_sep, extension=subfield.name)
-                fields.append(Field(full_name, create_getter(full_name), subfield.schema))
-        else:
-            if 'flatson_serialize' in value and value['flatson_serialize'].get('objects_to_extract'):
-                for i in range(value['flatson_serialize']['objects_to_extract']):
+    @property
+    def fields(self):
+        fields = []
+        for key, value in self.schema.get('properties', {}).items():
+            val_type = value.get('type')
+            if val_type == 'object':
+                inferrer = FieldsInferrer(value)
+                for subfield in inferrer.fields:
+                    full_name = '{prefix}{fsep}{extension}'.format(
+                        prefix=key, fsep=self.field_sep, extension=subfield.name)
                     fields.append(
-                        Field(key + str(i + 1), create_tuple_getter(key, i), value))
+                        Field(full_name, self.create_getter(full_name), subfield.schema))
             else:
-                fields.append(Field(key, create_getter(key), value))
+                if 'flatson_serialize' in value and value['flatson_serialize'].get(
+                        'objects_to_extract'):
+                    for i in range(value['flatson_serialize']['objects_to_extract']):
+                        fields.append(
+                            Field(key + str(i + 1), self.create_list_getter(key, i),
+                                  value))
+                else:
+                    fields.append(Field(key, self.create_getter(key), value))
 
-    return sorted(fields)
+        return sorted(fields)
+
+    def create_getter(self, path, field_sep='.'):
+        if field_sep in path:
+            first_key, rest = path.split(field_sep, 1)
+            return lambda x: self.create_getter(rest)(x.get(first_key, {}))
+        else:
+            return lambda x: x.get(path, None)
+
+    def create_list_getter(self, key, index):
+        return lambda x: x.get(key, None)[index]
 
 
 def extract_key_values(array_value, separators=(';', ',', ':'), **kwargs):
@@ -76,14 +82,6 @@ def join_values(array_value, separator=',', **kwargs):
     return separator.join(str(x) for x in array_value)
 
 
-def unpack_fixed(array_value, separator=',', **kwargs):
-    if not 'objects_to_extract' in kwargs:
-        raise ValueError('objects_to_extract should be defined for unpack fixed method')
-    if array_value:
-        array_value = array_value[:kwargs.get('objects_to_extract')]
-        return separator.join(str(x) for x in array_value)
-
-
 class Flatson(object):
     """This class implements flattening of JSON objects
     """
@@ -91,7 +89,6 @@ class Flatson(object):
         'extract_key_values': extract_key_values,
         'extract_first': extract_first,
         'join_values': join_values,
-        'unpack_fixed': unpack_fixed,
     }
 
     def __init__(self, schema, field_sep='.'):
@@ -109,8 +106,8 @@ class Flatson(object):
     def _build_fields(self):
         if self.schema.get('type') != 'object':
             raise ValueError("Schema should be of type object")
-        return infer_flattened_field_names(self.schema,
-                                           field_sep=self.field_sep)
+        inferrer = FieldsInferrer(self.schema, field_sep=self.field_sep)
+        return inferrer.fields
 
     @classmethod
     def from_schemafile(cls, schemafile):
