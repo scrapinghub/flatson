@@ -17,7 +17,6 @@ import unittest
 from flatson import Flatson
 import tempfile
 
-
 EMPTY_SCHEMA = skinfer.generate_schema({})
 
 SIMPLE_SCHEMA = skinfer.generate_schema({'a_prop': ''})
@@ -108,7 +107,9 @@ class TestFlatson(unittest.TestCase):
         }
         schema = skinfer.generate_schema(contain_nested_object)
         f = Flatson(schema=schema)
-        self.assertEquals(['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'], f.fieldnames)
+        self.assertEquals(
+            ['first', 'second.one.a', 'second.one.b', 'second.two.a', 'second.two.b'],
+            f.fieldnames)
         self.assertEquals(['hello', 1, 2, 3, 4], f.flatten(contain_nested_object))
 
     def test_convert_object_with_simple_list_with_default_serialization(self):
@@ -121,7 +122,8 @@ class TestFlatson(unittest.TestCase):
 
         f = Flatson(schema=schema)
         self.assertEquals(['first', 'list', 'list2'], f.fieldnames)
-        self.assertEquals(['hello', '[1,2,3,4]', '["one","two"]'], f.flatten(contain_list))
+        self.assertEquals(['hello', '[1,2,3,4]', '["one","two"]'],
+                          f.flatten(contain_list))
 
     def test_convert_object_with_nested_simple_list_with_default_serialization(self):
         contain_list = {
@@ -256,6 +258,21 @@ class TestFlatson(unittest.TestCase):
         f = Flatson(schema=schema)
         with self.assertRaises(ValueError):
             f.register_serialization_method('extract_first', lambda _v, **kw: _v[2])
+
+    def test_unpack_arrays_into_fixed_number_of_objects(self):
+        # given:
+        sample = {'first': 'hello',
+                  'list': [{'value1': 'one'}, {'value2': 'two'}, {'value3': 'three'}]}
+        schema = skinfer.generate_schema(sample)
+        serialize_options = dict(method='unpack_fixed', objects_to_extract=2)
+        schema['properties']['list']['flatson_serialize'] = serialize_options
+
+        # when:
+        f = Flatson(schema=schema)
+        result = f.flatten(sample)
+        # then:
+        self.assertEquals(['first', 'list1', 'list2'], f.fieldnames)
+        self.assertEquals(['hello', '{"value1": "one"}', '{"value2": "two"}'], result)
 
 
 if __name__ == '__main__':
