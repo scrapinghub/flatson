@@ -8,8 +8,9 @@ Flatson
 .. image:: https://img.shields.io/pypi/v/flatson.svg
         :target: https://pypi.python.org/pypi/flatson
 
+Flatson emerged at `Scrapinghub`_ from the need to export huge JSON-like datasets into **flat** CSV-like tables. Flatson is particularly useful to handle really huge datasets, because it doesn't load all the data in memory at once.
 
-A tool to flatten JSON-like objects, allowing to configure via an annotated JSON schema
+.. _Scrapinghub: http://scrapinghub.com
 
 * Free software: BSD license
 * Documentation: https://flatson.readthedocs.org.
